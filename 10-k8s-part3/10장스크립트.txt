@@ -1,0 +1,450 @@
+@슬라이드4
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+kubectl edit deployment -n kube-system metrics-server
+
+   --kubelet-insecure-tls
+
+
+@슬라이드5
+k8s/resources 디렉토리의 파일 참조
+
+
+@슬라이드6
+kubectl apply -f nodeapp-lb.yaml
+kubectl apply -f resource1.yaml
+
+kubectl get all
+
+
+@슬라이드7
+kubectl describe pods 파드명
+
+kubectl get pods -o custom-columns="Name:metadata.name,\
+   Requet-CPU:spec.containers[*].resources.requests.cpu,\
+   Request-MEM:spec.containers[*].resources.requests.memory,\
+   Limit-CPU:spec.containers[*].resources.limits.cpu,\
+   Limit-MEM:spec.containers[*].resources.limits.memory" 
+
+
+@슬라이드8
+kubectl top nodes
+kubectl top pods
+
+
+@슬라이드10
+k8s/resources 디렉토리의 파일 참조
+
+kubectl describe node worker1
+
+
+@슬라이드11
+kubectl apply -f resource2.yaml
+
+kubectl get pods -o wide
+
+kubectl top node
+
+
+@슬라이드12
+# resource2.yaml에서 replica 갯수를 1증가시켜 5로 설정 후 적용
+kubectl apply -f resource2.yaml
+
+kubectl get pods -o wide
+
+
+@슬라이드14
+kubectl describe pods 파드명 -n 네임스페이스
+
+
+@슬라이드17~18
+k8s/resources 디렉토리의 파일 참조
+
+## 다음 명령 실행
+kubectl apply -f resource-quota.yaml
+kubectl apply -f nodeapp-deploy.yaml
+
+## Pod 정상 배포 확인 후 다음 명령 실행
+kubectl scale deployment nodeapp-deploy --replicas=5
+
+## Pod가 5개 아닌 4개인 것을 확인
+## ResourceQuota에 의해서 제한된 것
+
+## 리소스 정리
+kubectl delete -f resource-quota.yaml
+kubectl delete -f nodeapp-deploy.yaml
+
+
+@슬라이드19~20
+k8s/resources 디렉토리의 파일 참조
+
+## nodeapp-deploy2 배포 : 이것은 nodeapp-deploy.yaml에서 resource 설정을 제거한 것
+kubectl apply -f nodeapp-deploy2.yaml
+
+## Pod 리스트 조회 후 생성된 pod 이름으로 describe 명령 수행하여 QoS가 best effort임을 확인
+kubectl get pods
+kubectl describe pods nodeapp-deploy2-xxxxxxx-yyyy
+
+## LimitRange 리소스 생성하고 deploymen의 replcas 값 변경
+kubectl apply -f limitrange.yaml
+kubectl scale deployment nodeapp-deploy2 --replicas=3
+
+## 가장 최근에 생성된 pod의 QoS 확인
+kubectl get pods 명령 실행 후 AGE 필드 확인
+kubectl describe pods nodeapp-deploy2-zzzzzz-kkkk
+
+## 리소스 정리
+kubectl delete -f nodeapp-deploy2.yaml
+kubectl delete -f limitrange.yaml
+
+
+@슬라이드28
+k8s/scheduling 디렉토리의 파일 참조
+
+# worker2 에 레이블 부여
+kubectl label nodes worker2 env=test
+
+# 왼쪽의 예제 적용
+kubectl apply -f node-selector1.yaml
+
+# pod가 생성된 worker 노드 확인
+kubectl get pods -o wide
+
+# 테스트 후 삭제
+kubectl delete -f node-selector1.yaml
+
+# worker2 의 레이블 삭제
+kubectl label nodes worker2 env-
+
+
+@슬라이드31
+k8s/scheduling 디렉토리의 파일 참조
+
+
+@슬라이드32
+k8s/scheduling 디렉토리의 파일 참조
+
+kubectl label nodes worker1 memory=4
+kubectl label nodes worker2 memory=8
+
+
+@슬라이드33
+kubectl apply -f affinity1.yaml
+
+kubectl get pods -o wide
+
+# 테스트 후 종료
+kubectl delete -f affinity1.yaml
+
+
+@슬라이드34
+k8s/scheduling 디렉토리의 파일 참조
+
+kubectl apply -f affinity2.yaml
+kubectl get pods -o wide
+kubectl delete -f affinity2.yaml
+
+
+@슬라이드35
+kubectl label nodes worker1 memory=4 --overwrite
+kubectl label nodes worker2 memory=8 env=test --overwrite
+kubectl label nodes worker3 env=test --overwrite
+
+kubectl get nodes -L env,memory,kubernetes.io/hostname
+
+
+@슬라이드36
+k8s/scheduling 디렉토리의 파일 참조
+
+
+@슬라이드37
+k8s/scheduling 디렉토리의 파일 참조
+
+kubectl apply -f affinity3.yaml
+kubectl get pods -o wide
+kubectl delete -f affinity3.yaml
+
+
+@슬라이드38
+k8s/scheduling 디렉토리의 파일 참조
+
+kubectl apply -f affinity5.yaml
+kubectl get pods -o wide
+kubectl delete -f affinity5.yaml
+
+
+@슬라이드39
+kubectl label nodes worker1 memory-
+kubectl label nodes worker2 memory- env-
+kubectl label nodes worker3 env-
+
+
+@슬라이드41
+k8s/scheduling 디렉토리의 파일 참조
+
+kubectl taint node worker1  app=nodeapp:NoSchedule
+kubectl taint node worker2  app=nodeapp:NoSchedule
+
+kubectl apply -f no-toleration.yaml
+
+
+@슬라이드42
+k8s/scheduling 디렉토리의 파일 참조
+
+kubectl apply -f toleration.yaml
+
+kubectl delete -f toleration.yaml
+kubectl taint node worker1  app=nodeapp:NoSchedule-
+kubectl taint node worker2  app=nodeapp:NoSchedule-
+
+
+@슬라이드44~45
+k8s/scheduling 디렉토리의 파일 참조
+
+
+@슬라이드 46
+## priorityclass 생성
+kubectl apply -f priority.yaml
+
+## 낮은 우선 순위의 pod 4개 생성 --> 4개 Pod 정상 상태 확인
+kubectl apply -f deploy-low.yaml
+kubectl get pods
+
+## 높은 우선 순위의 Pod 4개 생성
+kubectl apply -f deploy-high.yaml
+
+## Pod 목록을 조회하여 우선순위가 낮은 Pod들이 Eviction됨을 확인
+## Eviction된 Pod들은 리소스가 여유있을 때까지 Pending 상태
+
+## 테스트 후 리소스 정리
+kubectl delete -f deploy-high.yaml
+kubectl delete -f deploy-low.yaml
+kubectl delete -f priority.yaml
+
+
+@슬라이드49
+k8s/cordon 디렉토리의 파일 참조
+
+
+@슬라이드50~52
+kubectl apply -f drain.yaml
+
+# node별 pod 스케줄링된 결과 확인
+kubectl get pods -o wide
+
+# worker3 Node를 drain
+# daemonset은 drain 할 수 없으므로 무시하도록 실행
+kubectl drain worker3 --ignore-daemonsets --delete-emptydir-data --force
+
+# drain 완료후 노드별 스케줄링된 결과 확인
+kubectl get pods -o wide
+
+# 노드별 상태 확인
+kubectl get nodes
+
+# worker3 노드 uncordon
+kubectl uncordon worker3
+
+# Pod 를 8개로 늘렸다가 6개로 다시 줄임
+kubectl scale deployment/nodeapp --replicas=8
+kubectl scale deployment/nodeapp --replicas=6
+
+# 노드별 Pod 배치 조회
+kubectl get pods -o wide
+
+# 테스트가 완료되었다면 리소스 제거
+kubectl delete -f drain.yaml
+
+
+@슬라이드54
+k8s/pdb 디렉토리의 파일 참조
+
+
+@슬라이드55
+kubectl apply -f pdb.yaml
+kubectl apply -f deploy-pdb.yaml
+
+# 각 노드당 2개씩의 Pod가 배치됨
+kubectl get pods -o wide
+
+# deployment 의 replicas를 5개 미만으로 줄여봄. 정상적으로 축소됨. 왜? Controller의 상태 변경이므로
+kubectl scale deployment nodeapp --replicas=3
+kubectl get pods
+
+# deployment 의 replicas를 6개로 재설정
+kubectl scale deployment nodeapp --replicas=6
+
+
+@슬라이드56
+# 터미널 창을 하나 새로 더 열어서 worker3 노드 drain
+kubectl drain worker3 --ignore-daemonsets --delete-emptydir-data --force
+# 기존 터미널 창에서 다음 명령어 실행. Pod가 하나씩 중단되면서 새로운 Pod가 실행됨을 알 수 있음
+# 특정 시점에 실행중인 Pod가 5개 이하가 되어서는 안됨
+kubectl get pods -o wide
+
+# 새로운 터미널창에서 worker2 노드 drain 
+kubectl drain worker2 --ignore-daemonsets --delete-emptydir-data --force
+# 기존 터미널 창에서 다음 명령어를 실행하여 각 노드별 Pod 확인
+kubectl get pods -o wide
+
+# 리소스 삭제
+kubectl delete -f pdb.yaml
+kubectl delete -f deploy-pdb.yaml
+
+# worker2, worker3 를 uncordon
+kubectl uncordon worker2
+kubectl uncordon worker3
+
+
+@슬라이드58~59
+k8s/hpa 디렉토리의 파일 참조
+
+
+@슬라이드60
+## deployment 배포
+kubectl apply -f hpa-deploy.yaml
+
+## Pod 1개 생성된 것 확인
+kubectl get pods
+
+## HPA 리소스 적용
+kubectl apply -f hpa.yaml
+
+## Pod 목록 지속 확인하여 Pod 동적 생성 확인. 중단은 CTRL+C
+watch kubectl get pods -l app=hpa-deploy
+
+## HPA 상태 실시간 모니터링
+watch kubectl get hpa
+
+## 테스트 완료 후 리소스 정리
+kubectl delete -f hpa.yaml
+kubectl delete -f hpa-deploy.yaml
+
+
+@슬라이드62
+## Git Clone 후 Shell Script 실행
+git clone https://github.com/Kubernetes/autoscaler.git
+cd autoscaler/vertical-pod-autoscaler/
+./hack/vpa-up.sh
+
+## 설치 구성요소 확인
+## 3가지 구성요소 : vpa-admission-controller, vpa-recommender, vpa-updater
+kubectl get deployment -n kube-system
+
+## Pod가 정상 실행중인지 확인
+kubectl get pods -n kube-system | grep vpa
+
+## 디렉토리를 작업 경로로 다시 이동
+cd ../..
+
+
+@슬라이드63~64
+k8s/vpa 디렉토리의 파일 참조
+
+kubectl apply -f vpa-deploy.yaml
+kubectl apply -f vpa.yaml
+
+kubectl describe vpa vpa-demo
+
+
+@슬라이드65
+kubectl get pods -l app=vpa-deploy --watch
+kubectl get pods -o json  | jq '.items[].spec.containers[].resources'
+
+kubectl scale deployment vpa-deploy --replicas=2
+
+
+@슬라이드66
+kubectl delete -f vpa.yaml
+kubectl delete -f vpa-deploy.yaml
+cd autoscaler/vertical-pod-autoscaler/
+./hack/vpa-down.sh
+
+
+@슬라이드80
+# 예제 git clone 후 backend, frontend, test용도의 pod(nodeapp-pod) 준비
+git clone https://github.com/stepanowon/calico-policy-sample
+cd calico-policy-sample
+kubectl apply -f backend-web/k8s-backend.yaml
+kubectl apply -f frontend-web/k8s-frontend.yaml
+kubectl apply -f backend-web/nodeapp-pod.yaml
+
+#생성된 리소스 확인
+kubectl get pods,services
+
+
+@슬라이드82
+# nodeapp Pod에 대해 가상 터미널을 에뮬레이션해서 backend-web으로 직접 요청해봄
+kubectl exec -it nodeapp -- /bin/bash
+curl http://backend-web.default.svc:8080/countries
+
+curl http://192.168.56.51
+curl http://192.168.56.51:8000
+
+
+@슬라이드83
+# 모두 거부 정책 적용
+kubectl apply -f calico-policy/all-deny.yaml
+# 테스트 후 반드시 제거할 것
+kubectl delete -f calico-policy/all-deny.yaml
+
+
+@슬라이드85
+kubectl apply -f calico-policy/frontend-policy.yaml
+
+kubectl apply -f calico-policy/backend-policy.yaml
+
+
+@슬라이드86
+kubectl exec -it nodeapp -- /bin/bash
+curl http://backend-web.default.svc:8080/countries      //액세스 거부
+
+curl http://192.168.56.51               //액세스 거부
+curl http://192.168.56.51:8000          //액세스 성공
+
+
+@슬라이드87
+# 정책 삭제
+kubectl delete -f calico-policy/backend-policy.yaml
+kubectl delete -f calico-policy/frontend-policy.yaml
+
+# 리소스 삭제
+kubectl delete -f backend-web/k8s-backend.yaml
+kubectl delete -f backend-web/nodeapp-pod.yaml
+kubectl delete -f frontend-web/k8s-frontend.yaml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

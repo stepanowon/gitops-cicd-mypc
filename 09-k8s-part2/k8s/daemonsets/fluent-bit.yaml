@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  labels:
+    k8s-app: fluent-bit
+spec:
+  selector:
+    matchLabels:
+      name: fluent-bit
+  template:
+    metadata:
+      labels:
+        name: fluent-bit
+    spec:
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:4.0
+          volumeMounts:
+            - name: nginx-log-dir
+              mountPath: /var/log/nginx
+            - name: store-output
+              mountPath: /store/collected
+            - name: config
+              mountPath: /fluent-bit/etc/
+          resources:
+            limits:
+              memory: 100Mi
+              cpu: 100m
+      volumes:
+        - name: nginx-log-dir
+          hostPath:
+            path: /var/log/nginx
+            type: Directory
+        - name: store-output
+          hostPath:
+            path: /store/collected
+            type: DirectoryOrCreate
+        - name: config
+          configMap:
+            name: fluent-bit-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush        5
+        Log_Level    info
+
+    [INPUT]
+        Name tail
+        Path /var/log/nginx/access.log
+        Path_Key path
+        Tag nginx.access
+        DB /store/collected/flb.db
+        Refresh_Interval 5
+        Read_From_Head true
+
+    [OUTPUT]
+        Name file
+        Match nginx.*
+        Path /store/collected/
+        File nginx-access.log
+        Format plain

@@ -1,0 +1,53 @@
+@슬라이드4
+
+cd ~ && mkdir nexus-data  && sudo chown -R 200 nexus-data
+
+sudo docker run -d -p 8081:8081 -p 8082:8082 \
+  --name nexus -v ~/nexus-data:/nexus-data sonatype/nexus3:latest
+# 맥에서는 sonatypecommunity/nexus3 이미지를 이용함
+
+docker ps
+docker exec -it nexus /bin/bash
+cat /nexus-data/admin.password
+
+
+@슬라이드7
+
+sudo vi /etc/docker/daemon.json 
+
+{
+   "insecure-registries" : [ "192.168.56.101:8082" ]
+}
+
+sudo systemctl restart docker
+
+docker info 
+
+docker login -u admin  192.168.56.101:8082
+
+
+@슬라이드8
+
+cd ~/node-images/nodeapp
+docker  build  .  -t  nodeapp:1.0.0
+docker  tag  nodeapp:1.0.0  192.168.56.101:8082/nodeapp:1.0.0
+docker  push  192.168.56.101:8082/nodeapp:1.0.0
+
+
+@슬라이드10
+
+docker stop nexus
+docker rm nexus
+
+
+
+
+
+
+
+
+
+
+
+
+

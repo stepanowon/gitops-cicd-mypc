@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: limit1
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nodeapp
+  template:
+    metadata:
+      name: nodeapp
+      labels:
+        app: nodeapp
+    spec:
+      containers:
+      - name: nodeapp-slim
+        image: stepanowon/nodeapp-slim:1.0.0
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: "100Mi"
+            cpu: "32m"
+
+# 메모리
+#  - Mi : 1000 Mi byte --> 1 Gi Byte
+#  - M :   1024 MB --> 1 GB
+# CPU 
+#  - m : milli core,  1000 milli core --> 1 (CPU)

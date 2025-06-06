@@ -1,0 +1,171 @@
+@슬라이드4
+
+sudo wget -O /usr/share/keyrings/jenkins-keyring.asc https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+sudo apt update -y
+sudo apt install jenkins -y
+
+
+@슬라이드5
+
+sudo apt update
+sudo apt-get install apt-transport-https ca-certificates curl
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo add-apt-repository \
+"deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) \
+stable"
+
+sudo apt update 
+sudo apt install docker-ce docker-ce-cli containerd.io -y
+
+sudo usermod -a -G docker jenkins  
+
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo chmod 666 /var/run/docker.sock 
+
+
+@슬라이드6
+
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+
+@슬라이드12
+
+$ sudo find / -name "app.ini"
+/etc/gitea/app.ini
+
+$ sudo vi /etc/gitea/app.ini
+
+...
+[webhook]
+ALLOWED_HOST_LIST = jenkins.aaa.com, 192.168.56.0/24
+
+# gitea 서버 재시작
+sudo systemctl restart gitea
+
+
+@슬라이드33
+
+#1. Jenkinsfile에서 특정 플랫폼 지정하여 빌드
+app = docker.build("${env.IMAGE_REPO}", "--platform=linux/amd64  . ")
+
+#2. Dockerfile에서 플랫폼 지정
+FROM  --platform=amd64 node:22
+
+#3. Jenkinsfile에서 Docker Buildx 빌더를 사용하여 빌드 
+pipeline {
+    agent any
+    stages {
+        stage('Build Multi-Platform Image') {
+            steps {
+                script {
+                    withEnv(["DOCKER_CLI_EXPERIMENTAL=enabled"]) {
+                        sh """
+                        docker buildx create --use
+                        docker buildx build  .  --platform linux/amd64,linux/arm64 -t ${env.IMAGE_REPO}:${IMAGE_VERSION} --push 
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@슬라이드35
+
+pipeline {
+  agent any
+  stages {
+    stage('빌드 승인') {
+      input {
+        message '빌드를 진행할까요? (Y/N)'
+        ok 'Build'
+        submitter 'PM, TL'
+        parameters {
+           string(name:'CONTINUE', defaultValue:'Y', description:'빌드를 진행할지 Y/N으로 입력후 Build 버튼을 클릭합니다')
+        }
+      }
+      steps {
+          echo "빌드 진행 : ${CONTINUE}"
+      }
+    }
+  }
+}
+
+
+@슬라이드35
+
+pipeline {
+    agent any
+    tools {
+        maven 'maven-3.6' 
+    }
+    stages {
+        stage('버전 확인') {
+            steps {
+                script {
+                    sh 'mvn --version'
+                }
+            }
+        }
+    }
+}
+
+
+@슬라이드39
+
+pipeline {
+    agent any
+    tools {
+        nodejs 'node-20' 
+    }
+    stages {
+        stage('node 버전 확인') {
+            steps {
+                script {
+                    sh 'node --version'
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

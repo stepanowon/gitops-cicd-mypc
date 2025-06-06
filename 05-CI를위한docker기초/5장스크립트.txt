@@ -1,0 +1,69 @@
+@슬라이드7
+
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# 다음은 사용자명을 변경해 실행
+sudo usermod -aG docker  우분투사용자명
+sudo chmod 666  /var/run/docker.sock
+
+
+@슬라이드18
+
+mkdir ~/images && cd ~/images
+git clone https://github.com/stepanowon/nodeapp
+git clone https://github.com/stepanowon/nodeapp-slim
+git clone https://github.com/stepanowon/nodeapp-slim2
+git clone https://github.com/stepanowon/demosvc
+
+
+@슬라이드 26
+
+cd ~/images/nodeapp && docker build  .  -t nodeapp:1.0.0
+cd ~/images/nodeapp-slim&& docker build  .  -t nodeapp-slim:1.0.0
+cd ~/images/nodeapp-slim2 && docker build  .  -t nodeapp-slim2:1.0.0
+cd ~/images/demosvc && docker build  .  -t demosvc:1.0.0
+
+
+@슬라이드27
+
+docker tag  nodeapp:1.0.0  [dockerhub 사용자명]/nodeapp:1.0.0
+docker push [dockerhub 사용자명]/nodeapp:1.0.0 
+
+
+@슬라이드28
+
+docker run -d -p 8081:8080 --name  nodeapp1  [dockerhub사용자명]/nodeapp:1.0.0
+
+
+@슬라이드30
+
+docker buildx ls
+
+docker buildx create --name multi-platform-builder --driver docker-container --bootstrap --use
+
+
+@슬라이드31
+
+docker buildx build  .  --platform linux/arm64,linux/amd64  -t  [도커허브사용자명]/nodeapp:1.0.0 
+docker buildx build  .  --load  -t  [도커허브사용자명]/nodeapp:1.0.0
+docker images
+docker buildx build  . --platform linux/arm64,linux/amd64 -t  [도커허브사용자명]/nodeapp:1.0.0  --push 
+
+
+
+
+
+
+

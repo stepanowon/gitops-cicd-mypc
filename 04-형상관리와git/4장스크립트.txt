@@ -1,0 +1,117 @@
+@슬라이드8
+
+git clone https://github.com/stepanowon/ubuntu-on-mac
+cd ubuntu-jenkins
+vagrant up
+
+# 모두 설치 후 리로딩
+vagrant reload
+
+# 각 가상머신에 접속하여 다음 명령어 실행
+# 사용자 계정 / 패스워드 --> user1/asdf
+# 가상머신 접속 방법 : ssh user1@192.168.56.101~103
+
+# 다음 스크립트는 윈도우인 경우에만 실행함
+sudo apt install virtualbox-ext-pack -y
+
+
+@슬라이드8 - 10
+
+# postgresql 서버 설치
+$ sudo apt install postgresql -y
+# postgresql 설정 파일 위치 확인
+$ sudo -i -u postgres psql -U postgres -c 'SHOW config_file'
+
+# etc/postgresql/16/main/postgresql.conf 설정 파일의 두가지 정보 변경
+$ sudo vi /etc/postgresql/16/main/postgresql.conf
+
+listen_addresses = '*'
+password_encryption = scram-sha-256
+
+
+# /etc/postgresql/16/main/pg_hba.conf 편집
+# 클라이언트의 주소와 역할 이름을 지정하고 모든 데이터베이스에 연결을 허용할지 여부를 설정
+$ sudo vi /etc/postgresql/16/main/pg_hba.conf
+
+# Database administrative login by Unix domain socket
+local   all             postgres                                trust
+......
+
+# 다음 열은 추가
+host    giteadb         gitea           192.168.56.0/24         scram-sha-256
+
+------------------
+# 편집이 끝났다면 서비스 재시작
+$ sudo systemctl restart postgresql.service
+
+# 새로운 postgresql 데이터베이스 사용자 추가
+# 데이터베이스 : giteadb
+# 사용자 : gitea / giteapwd
+
+$ psql -U postgres
+psql (16.6 (Ubuntu 16.6-0ubuntu0.24.04.1))
+Type "help" for help.
+
+# 사용자명/패스워드는 적절하게 변경하여 사용할 수 있음
+CREATE ROLE gitea WITH LOGIN PASSWORD 'giteapwd';
+
+# 데이터베이스 생성. 데이머베이스명을 적절하게 변경할 수 있음
+CREATE DATABASE giteadb WITH OWNER gitea TEMPLATE template0 ENCODING UTF8 LC_COLLATE 'en_US.UTF-8' LC_CTYPE 'en_US.UTF-8';
+
+# psql을 빠져나오기 위해 다음 명령어 사용
+exit
+
+# 연결 테스트
+$ psql "postgres://gitea@192.168.56.103/giteadb"
+
+
+@슬라이드12-13
+
+# 새로운 사용자 추가
+sudo adduser --system --shell /bin/bash --gecos 'Git Version Control' --group --disabled-password --home /home/git  git
+
+# 바이너리 파일 다운로드, 복사
+VERSION=1.22.6
+sudo wget -O /tmp/gitea https://dl.gitea.io/gitea/${VERSION}/gitea-${VERSION}-linux-amd64
+# 맥OS 용 다운로드
+sudo wget -O /tmp/gitea https://dl.gitea.io/gitea/${VERSION}/gitea-${VERSION}-linux-arm64
+sudo mv /tmp/gitea /usr/local/bin
+sudo chmod +x /usr/local/bin/gitea
+
+# 필요한 디렉토리 설정
+sudo mkdir -p /var/lib/gitea/{custom,data,log}
+sudo chown -R git:git /var/lib/gitea/
+sudo chmod -R 750 /var/lib/gitea/
+sudo mkdir /etc/gitea
+sudo chown root:git /etc/gitea
+sudo chmod 770 /etc/gitea
+
+# systemd로 등록 & 시작
+
+sudo wget https://raw.githubusercontent.com/go-gitea/gitea/main/contrib/systemd/gitea.service -P /etc/systemd/system/
+
+sudo systemctl enable gitea
+sudo systemctl start gitea
+
+# 상태 확인
+sudo systemctl status gitea
+
+# 방화벽에서 3000번 포트 허용
+sudo ufw allow 3000/tcp
+
+# http://192.168.56.102:3000 으로 접속하여 브라우저 기반의 설정 시작
+
+# 만일 chrome, firefox로 접속되지 않는다면 edge, safari 브라우저를 사용할 것
+
+
+@슬라이드17
+
+git config --global user.name "사용자명"
+git config --global user.email "사용자이메일주소"
+git config --global core.editor "vim"
+"nano", "code --wait" (윈도우 환경에서 Visual Studio Code 사용시)
+git config --global init.defaultBranch main
+
+
+
+

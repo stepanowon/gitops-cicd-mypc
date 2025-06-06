@@ -1,0 +1,29 @@
+auth:
+  adminUser: keycloak		# 관리자 사용자명
+  adminPassword: asdf		# 관리자 패스워드
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  # 내부 IP 주소 사용
+  hostname: keycloak.ssamz.192.168.56.80.nip.io
+  # TLS 설정  
+  tls: true
+  extraTls:
+    - hosts:
+        - keycloak.ssamz.192.168.56.80.nip.io
+      secretName: keycloak-tls
+service:
+  type: ClusterIP
+proxy: edge
+keycloak:
+  extraEnv:
+    - name: KEYCLOAK_FRONTEND_URL
+      value: https://keycloak.ssamz.192.168.56.80.nip.io
+postgresql:
+  enabled: false
+externalDatabase:
+  host: 192.168.56.103
+  port: 5432
+  user: keycloak
+  password: asdf
+  database: keycloakdb

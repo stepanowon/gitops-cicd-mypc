@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeapp
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nodeapp
+  template:
+    metadata:
+      name: nodeapp
+      labels:
+        app: nodeapp
+    spec:
+      tolerations:
+      - effect: NoSchedule
+        key: app
+        value:  nodeapp
+      containers:
+      - name: nodeapp
+        image: stepanowon/nodeapp:1.0.0
+        ports:
+        - containerPort: 8080

@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpa-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hpa-deploy
+  template:
+    metadata:
+      labels:
+        app: hpa-deploy
+    spec:
+      containers:
+      - name: hpa-deploy
+        image: vish/stress   # CPU 부하 생성용 이미지
+        args:
+          - -cpus
+          - "1"              # 1 CPU를 계속 사용
+        resources:
+          requests:
+            cpu: 100m
+          limits:
+            cpu: 200m

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: liveness2
+spec:
+  containers:
+  - name: liveness2
+    image: multiarch/busybox:amd64-slim		#맥에서는 arm64-slim
+    args:         # 파일을 생성한 뒤 30초 후에 파일 삭제
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -f /tmp/healthy; sleep 600
+    livenessProbe:
+      exec:
+        command:         # cat /tmp/healty 명령이 성공하면 0을 리턴
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5

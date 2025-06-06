@@ -1,0 +1,413 @@
+@슬라이드13
+k8s/auth 디렉토리의 파일 참조
+
+# dev namespace 생성하고 sa-dev ServiceAccount 생성
+kubectl create ns dev
+kubectl create sa sa-dev -n dev
+
+kubectl apply -f sa-dev-role.yaml
+
+
+@슬라이드14
+kubectl create token sa-dev -n dev --duration=86400s
+
+# kube config 수정
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUS......
+    server: https://192.168.56.201:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+  name: kubernetes
+- context:
+    cluster: kubernetes
+    user: sa-dev
+  name: sa-dev
+current-context: sa-dev
+kind: Config
+preferences: {}
+users:
+- name: sa-dev
+  user:
+    token: [이전단계에서 생성한 토큰]
+- name: kubernetes-admin
+  user:
+    client-certificate-data: LS0tLS1CRUdJTiBD...
+    client-key-data: LS0tLS1CRUdJTiBS...
+
+
+@슬라이드15
+# dev namespace에만 접근이 가능한지 테스트 수행
+kubectl get all -n dev			//ok
+kubectl create sa test1 -n dev		//ok
+
+kubectl get all -n default			//에러
+kubectl get ns				//에러
+
+# 클라이언트 컴퓨터(윈도우 우분투)에서
+kubectl config use-context kubernetes-admin@kubernetes 
+kubectl config delete-context sa-dev
+kubectl config delete-user sa-dev
+kubectl delete ns dev
+
+
+@슬라이드17
+kubectl create ns dev2
+
+# 디렉토리 사용자 홈 디렉토리로 이동
+cd ~
+
+# private key 생성
+openssl genrsa -out user1.key 
+
+# csr(Certificate Signing Request) 생성. CN에 사용자, O에 그룹 지정
+openssl req -new -key user1.key -subj "/CN=user1/O=group1" -out user1.csr
+
+# csr과 k8s의 CA 키와 인증서를 이용해 Client 인증서 생성
+sudo openssl x509 -req -in user1.csr -CA /etc/kubernetes/pki/ca.crt \
+  -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out user1.crt -days 3650
+
+
+@슬라이드18
+k8s/auth 디렉토리의 파일 참조
+
+kubectl apply -f group1-role.yaml
+
+
+@슬라이드19
+
+### master에서 수행할 것
+
+# kube config 파일 백업
+cp ~/.kube/config ~/.kube/backup.conf
+
+# 인증을 위한 user credential을 kube config 파일에 등록
+kubectl config set-credentials user1 \
+   --client-certificate=/home/user1/user1.crt \
+   --client-key=/home/user1/user1.key --embed-certs=true
+
+# context 생성
+# kubectl config get-clusters 명령어로 cluster 이름 확인 후 (예시: Kubernetes)
+kubectl config set-context user1@k8s --cluster=kubernetes --user=user1
+
+# kube config 파일을 다른 파일명으로 복사 후 config 내용 수정
+cp ~/.kube/config ~/user1.conf
+
+# 백업했던 kube config로 원복
+cp ~/.kube/backup.conf  ~/.kube/config
+
+
+@슬라이드20
+
+# user1.conf 수정
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ......
+    server: https://192.168.56.201:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    namespace: dev2
+    user: user1
+  name: user1@k8s
+current-context: user1@k8s
+kind: Config
+preferences: {}
+users:
+- name: user1
+  user:
+    client-certificate-data: ......
+    client-key-data: ......
+
+
+@슬라이드21
+# 윈도우 우분투에서 openssh-server 설치
+sudo apt install openssh-server -y
+
+# 윈도우 우분투에서 ip a 명령어로 IP 주소 확인 후 master에서 scp 명령어로 user1.conf 파일 복사
+scp ~/user1.conf 우분투사용자명@우분투IP주소:~/
+
+# 윈도우 우분투에서
+# 기존 kube config 백업 후 user1.conf 파일을 우분투 사용자의 kube config 로 설정
+cp  ~/.kube/config  ~/.kube/backup.conf
+cp  ~/user1.conf  ~/.kube/config
+kubectl config use-context user1@k8s
+
+# 적용 여부 테스트
+kubectl get pods -n dev2  		//정상 실행
+kubectl get pods -n default   		//권한없음 에러
+
+
+@슬라이드22
+# 윈도우 우분투에서 기존 kube config 백업으로 복구한 후 컨텍스트 변경
+cp ~/.kube/backup.conf  ~/.kube/config
+kubectl config use-context kubernetes-admin@kubernetes
+
+kubectl delete ns dev2
+
+
+@슬라이드25
+# master 가상머신에서
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+
+https://github.com/stepanowon/k8s-on-win  
+
+
+@슬라이드26
+# server3에서
+# postgresql 서버 설치
+$ sudo apt install postgresql -y
+
+# postgresql 서버 설정 : postgresql.conf 파일에서 내용을 찾아서 변경
+$ sudo nano /etc/postgresql/16/main/postgresql.conf
+listen_addresses = '*'
+password_encryption = scram-sha-256
+
+
+$ sudo nano /etc/postgresql/16/main/pg_hba.conf
+# 다음열을 찾아서 볼드체 부분 변경
+local   all             postgres                                trust
+......
+# 다음 열은 추가
+host    keycloakdb      keycloak         192.168.56.0/24        scram-sha-256
+
+# 모두 변경했다면 서비스 재시작
+$ sudo systemctl restart postgresql.service
+
+
+@슬라이드27
+
+# 루트 권한으로 psql 접속 후 사용자, DB 설정
+$ psql -U postgres
+
+# 사용자명/패스워드는 적절하게 변경하여 사용할 수 있음
+CREATE ROLE keycloak WITH LOGIN PASSWORD 'asdf';
+
+# 데이터베이스 생성. 데이머베이스명을 적절하게 변경할 수 있음
+CREATE DATABASE keycloakdb WITH OWNER keycloak TEMPLATE template0 ENCODING UTF8 LC_COLLATE 'en_US.UTF-8' LC_CTYPE 'en_US.UTF-8';
+
+# 설정 후 psql에서 exit
+exit
+
+# 연결 테스트 후 exit
+$ psql "postgres://keycloak@192.168.56.103/keycloakdb"
+exit
+
+
+@슬라이드28~29
+# 인증 요청서(CSR) 생성 : master 가상머신에서
+mkdir -p ~/keycloak/tls
+openssl req -new -newkey rsa:2048 -nodes -days 3650 -keyout ~/keycloak/tls/keycloak.key \
+  -out ~/keycloak/tls/keycloak.csr -subj "/CN=keycloak.ssamz.192.168.56.80.nip.io/O=ssamz"
+
+# k8s 클러스터의 내부 CA 키,인증서를 이용해 keycloak용 인증서 생성
+sudo bash -c 'openssl x509 -req -in /home/user1/keycloak/tls/keycloak.csr \
+  -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key \
+  -CAcreateserial -out /home/user1/keycloak/tls/keycloak.crt -days 3650 \
+  -extensions v3_req \
+  -extfile <(cat <<EOF
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = keycloak.ssamz.192.168.56.80.nip.io
+EOF
+)'
+
+# 생성한 인증서의 소유권을 user1로 변경 --> 각 가상머신의 사용자명
+sudo chown user1:user1 ~/keycloak/tls/keycloak.crt
+
+# keycloak용 secret 등록
+kubectl create ns keycloak
+kubectl create secret tls keycloak-tls \
+  --cert=/home/user1/keycloak/tls/keycloak.crt \
+  --key=/home/user1/keycloak/tls/keycloak.key \
+  -n keycloak
+
+
+@슬라이드31
+# helm repo 추가 후 업데이트 : 윈도우 우분투 터미널에서 실행
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+# ingress-nginx 네임스페이스 ingress-controller 설치
+# service 타입을 LB로 설정하고 LB의 IP 주소를 192.168.56.80으로 설정. 이를 위해 metalLB가 미리 설정되어야 함
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --set controller.service.type=LoadBalancer \
+  --set controller.service.loadBalancerIP=192.168.56.80
+  --set controller.progressDeadlineSeconds=600
+
+
+@슬라이드32
+k8s/auth 디렉토리의 파일 참조
+
+# helm repo 추가
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+
+@슬라이드33
+# 설치
+helm upgrade -i keycloak bitnami/keycloak \
+  --version 24.0.5 \
+  --namespace keycloak --create-namespace \
+  -f keycloak-values.yaml
+
+
+# 설치 후 작동 여부 확인 : Pod가 running  1/1이 될 때까지 기다림. 3-4분 소요
+$ kubectl get po -n keycloak
+NAME                                               READY   STATUS    RESTARTS   AGE
+keycloak-0                                         1/1     Running   0          2m48s
+
+# 작동 여부 확인 후 브라우저 열고 다음 주소로 접속
+# 관리자 ID/PWD는 이전 페이지의 values.yaml 참조
+https://keycloak.ssamz.192.168.56.80.nip.io
+
+
+@슬라이드44
+# 추출된 인증서 파일 : /etc/kubernetes/pki/keycloak-ca.crt 
+openssl s_client -connect keycloak.ssamz.192.168.56.80.nip.io:443 -showcerts </dev/null 2>/dev/null \
+  | awk '/BEGIN/,/END/{ print }' | sudo tee /etc/kubernetes/pki/keycloak-ca.crt > /dev/null
+
+
+sudo vi /etc/kubernetes/manifests/kube-apiserver.yaml
+
+spec:
+  containers:
+  - command:
+    - kube-apiserver
+    - ......
+    # 다음 내용 추가
+    - --oidc-client-id=test-client
+    - --oidc-groups-claim=groups
+    - --oidc-issuer-url=https://keycloak.ssamz.192.168.56.80.nip.io/realms/k8s-realm
+    - --oidc-username-claim=preferred_username
+    - --oidc-ca-file=/etc/kubernetes/pki/keycloak-ca.crt
+
+
+@슬라이드46
+# k8s-realm 위치에 직접 생성한 realm 이름 지정
+https://keycloak.ssamz.192.168.56.80.nip.io/realms/k8s-realm/.well-known/openid-configuration
+
+
+
+@슬라이드47
+
+# 우분투 터미널에서 실행
+# 이전 단계에서 획득한 Client secret, Token endpoint 값을 지정
+CLIENT_SECRET=획득한ClientSecret지정
+TOKEN_ENDPOINT=획득한TokenEndpoint지정
+
+# 사설 인증서를 사용했기 때문에 --insecure 옵션 사용. 실무에서는 사용하지 말것
+curl -X POST ${TOKEN_ENDPOINT} \
+-d grant_type=password -d client_id=test-client -d client_secret=${CLIENT_SECRET} \
+-d username=k8s-user1 -d password="asdf" -d scope=openid  --insecure
+
+
+@슬라이드49
+k8s/auth 디렉토리의 파일 참조
+
+kubectl apply -f rbac-role.yaml
+
+
+@슬라이드50
+
+TOKEN_ENDPOINT=획득한TokenEndpoint지정
+
+TOKEN=$(curl -X POST ${TOKEN_ENDPOINT} \
+-d grant_type=password -d client_id=test-client -d client_secret=${CLIENT_SECRET} \
+-d username=k8s-user1 -d password="asdf" -d scope=openid  --insecure | jq -r '.id_token')
+
+curl  https://192.168.56.201:6443/api/v1/namespaces/default --header "Authorization: Bearer ${TOKEN}" --insecure
+
+
+@슬라이드51
+# 윈도우 우분투 터미널에서 실행
+cd ~
+sudo apt install unzip
+curl -LO https://github.com/int128/kubelogin/releases/download/v1.32.4/kubelogin_linux_amd64.zip
+unzip kubelogin_linux_amd64.zip
+sudo mv kubelogin /usr/local/bin/kubelogin
+sudo ln -s /usr/local/bin/kubelogin /usr/local/bin/kubectl-oidc_login
+
+openssl s_client -connect keycloak.ssamz.192.168.56.80.nip.io:443 -showcerts </dev/null 2>/dev/null \
+  | awk '/BEGIN/,/END/{ print }' | tee ~/keycloak-ca.crt > /dev/null
+sudo cp ./keycloak-ca.crt /usr/local/share/ca-certificates/keycloak.crt
+sudo update-ca-certificates
+
+
+@슬라이드52
+CLIENT_SECRET=획득한ClientSecret값지정
+
+kubectl oidc-login setup \
+  --oidc-issuer-url=https://keycloak.ssamz.192.168.56.80.nip.io/realms/k8s-realm  \
+  --oidc-client-id=test-client \
+  --oidc-client-secret=${CLIENT_SECRET}
+
+
+@슬라이드53
+kubectl config set-context oidc-context \
+  --cluster=kubernetes \
+  --user=oidc
+
+kubectl config use-context oidc-context
+
+kubectl get pods 			//ok
+kubectl create ns test1		//ok
+kubectl delete ns test1		//forbidden 오류
+
+
+@슬라이드54
+# master에서
+kubectl config use-context kubernetes-admin@kubernetes 
+
+helm uninstall keycloak -n keycloak
+
+helm uninstall ingress-nginx -n ingress-nginx
+
+kubectl delete ns ingress-nginx
+kubectl delete ns keycloak
+
+# 윈도우 우분투 터미널에서
+kubectl config use-context kubernetes-admin@kubernetes 
+
+kubectl config delete-context oidc-context
+kubectl config delete-user oidc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

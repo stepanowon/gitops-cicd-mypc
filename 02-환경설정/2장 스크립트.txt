@@ -1,0 +1,86 @@
+@슬라이드4
+git config --global user.name "자신의 영문이름"
+git config --global user.email "자신의 이메일 주소"
+
+
+@슬라이드9
+# git 설치
+sudo apt update -y
+sudo apt install git -y
+
+# docker 설치
+sudo apt update -y
+sudo apt install apt-transport-https ca-certificates curl -y
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo add-apt-repository -y \
+"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+sudo apt update -y
+sudo apt install docker-ce docker-ce-cli containerd.io -y
+
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo chmod 666 /var/run/docker.sock 
+
+
+@슬라이드10
+https://dl.k8s.io/release/v1.30.12/bin/windows/amd64/kubectl.exe
+
+https://github.com/argoproj/argo-cd/releases/tag/v3.0.0
+
+https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-windows-amd64
+
+https://github.com/helm/helm/releases
+
+
+
+@슬라이드11
+
+- kubectl
+curl -LO https://dl.k8s.io/release/v1.30.12/bin/linux/amd64/kubectl
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+rm kubectl
+
+- argocd cli
+curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+rm argocd-linux-amd64
+
+- kubectl argo rollout
+curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+chmod +x ./kubectl-argo-rollouts-linux-amd64
+sudo mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+
+- helm
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+rm get_helm.sh
+
+
+@슬라이드17
+
+- kubectl
+# Homebrew 설치 : 설치되어 있지 않다면...
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# kubectl 설치
+brew install kubectl
+
+
+- argocd cli
+brew install argocd
+
+- kubectl argo rollout
+brew install argoproj/tap/kubectl-argo-rollouts
+
+- helm
+brew install helm
+
+
+
+
+
+
+

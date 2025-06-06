@@ -1,0 +1,306 @@
+@슬라이드4
+k8s/volumes 디렉토리의 파일 참조
+
+kubectl apply -f emptydir-test.yaml
+
+
+@슬라이드7
+k8s/volumes 디렉토리의 파일 참조
+
+
+@슬라이드8
+kubectl apply -f nginx-web-hostpath.yaml
+curl http://192.168.56.51
+
+kubectl delete -f nginx-web-hostpath.yaml 
+
+
+@슬라이드9
+
+# server3 에서
+# 클라이언트의IP 주소 대역과 NFS 공유 디렉토리 지정
+NFS_DIR="/mnt/nfs"
+CLIENT_IP="192.168.56.0/24"
+
+# 서버 패키지 설치
+sudo apt update
+sudo apt-get install -y nfs-common nfs-kernel-server rpcbind portmap
+
+# 공유 디렉토리 준비
+sudo mkdir -p $NFS_DIR
+sudo chown -R nobody:nogroup $NFS_DIR
+sudo chmod 777 $NFS_DIR
+
+# NFS 설정 파일 수정
+echo "$NFS_DIR    $CLIENT_IP(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
+
+# NFS 설정 적용 및 서비스 재시작 및 리부트시 자동 시작 설정
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+sudo systemctl enable nfs-kernel-server
+
+
+@슬라이드10
+# master, worker1, worker2[, worker3] 에서
+sudo apt update 
+sudo apt install nfs-common -y
+
+showmount -e 192.168.56.103
+
+
+@슬라이드11
+k8s/volumes 디렉토리의 파일 참조
+
+
+@슬라이드12
+k8s/volumes 디렉토리의 파일 참조
+
+
+@슬라이드13
+k8s/volumes 디렉토리의 파일 참조
+
+
+@슬라이드14
+kubectl apply -f store-pv.yaml
+kubectl apply -f store-pvc.yaml
+kubectl apply -f nginx-web.yaml
+
+curl http://192.168.56.51
+
+
+#리소스 정리
+kubectl delete -f nginx-web-pvc.yaml
+kubectl delete -f store-pvc.yaml
+kubectl delete -f store-pv.yaml
+
+# server3에서
+sudo systemctl disable nfs-kernel-server
+sudo systemctl stop nfs-kernel-server
+
+
+
+@슬라이드15
+## configmap
+kubectl create configmap myconfig1  --from-file=./path1/cmfile
+kubectl create configmap myconfig2  --from-file=apikey=/path1/apikey.txt  --from-file=endpoint=/path1/endpoint.txt
+kubectl create configmap myconfig3  --from-literal=apikey=xxxxxxxxxxx  --from-literal=endpoint=10.1.1.1:3306
+## secret
+kubectl create secret generic mysecret1 --from-file=/path1/path2
+kubectl create secret generic mysecret2 --from-literal=userid=user1  --from-literal=password=asdfasdf
+kubectl create secret generic mysecret3  --from-file=ssh-privatekey=/home/stepano/.ssh/id_rsa  \
+     --from-file=ssh-publickey=/home/stepano/.ssh/id_rsa.pub
+kubectl create secret tls my-tls-secret  -n mynamespace \
+     --cert=/path1/tls.crt  --key=/path1/tls.key 
+kubectl create secret docker-registry my-registry-secret -n mynamespace \
+     --docker-server=https://index.docker.io/v1/  --docker-username=myusername  \
+     --docker-password=mypassword  --docker-email=myemail@example.com
+
+
+@슬라이드16
+k8s/configmap 디렉토리의 파일 참조
+
+kubectl apply -f config-secret.yaml
+
+kubectl describe configmap myconfig
+kubectl describe secret mysecret
+
+
+@슬라이드17
+k8s/configmap 디렉토리의 파일 참조
+
+
+@슬라이드18
+kubectl apply -f pod-cm.yaml
+kubectl get pods
+kubectl exec -it pod-cm -- /bin/bash
+
+kubectl create secret docker-registry [시크릿명] \
+ --docker-server=[도커레지스트리명] \
+ --docker-username=[사용자명] \
+ --docker-password=[패스워드]
+
+** 리소스 정리
+kubectl delete -f pod-cm.yaml
+kubectl delete -f config-secret.yaml
+
+
+@슬라이드22
+k8s/daemonsets 디렉토리의 파일 참조
+
+@슬라이드24
+k8s/daemonsets 디렉토리의 파일 참조
+
+kubectl apply -f nginx.yaml
+
+curl 192.168.56.51
+
+kubectl apply -f fluent-bit.yaml
+
+
+@슬라이드26
+kubectl delete -f fluent-bit.yaml
+kubectl delete -f nginx.yaml
+
+
+@슬라이드29
+# server3 가상머신에서
+# 클라이언트의IP 주소 대역과 NFS 공유 디렉토리 지정
+NFS_DIR="/mnt/web"
+CLIENT_IP="192.168.56.0/24"
+
+# 서버 패키지 설치
+sudo apt update
+sudo apt-get install -y nfs-common nfs-kernel-server rpcbind portmap
+
+# 공유 디렉토리 준비
+sudo mkdir -p $NFS_DIR
+sudo chown -R nobody:nogroup $NFS_DIR
+sudo chmod 777 $NFS_DIR
+
+# NFS 설정 파일 수정
+echo "$NFS_DIR    $CLIENT_IP(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
+
+# NFS 설정 적용 및 서비스 재시작 및 리부트시 자동 시작 설정
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+sudo systemctl enable nfs-kernel-server
+
+
+@슬라이드30
+
+# 모든 k8s 가상머신에서 실행
+sudo apt update 
+sudo apt install nfs-common -y
+
+showmount -e 192.168.56.103
+
+
+@슬라이드31
+# helm repo 등록
+helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+
+# helm release 인스톨. storageClassName을 직접 지정
+helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
+--set nfs.server=192.168.56.103 \
+--set nfs.path=/mnt/web \
+--set storageClass.name=web-nfs-client
+
+# 등록된 storageClass 확인 : web-nfs-client
+kubectl get storageClass
+
+
+@슬라이드32
+k8s/statefulsets 디렉토리의 파일 참조
+
+
+@슬라이드33
+kubectl apply -f web-statefulset-1.yaml
+
+kubectl get svc,pods,pv,pvc
+
+
+@슬라이드34
+kubectl exec -it web-0  -- /bin/bash
+curl http://web-0.nginx.default.svc.cluster.local
+curl http://web-1.nginx.default.svc.cluster.local
+
+
+@슬라이드35
+kubectl delete pods web-1
+잠시후 pod가 재생성됨
+kubectl exec -it web-0  --  /bin/bash
+curl http://web-1.nginx.default.svc.cluster.local  로 요청 시도
+
+kubectl delete -f web-statefulset-1.yaml
+helm uninstall nfs-subdir-external-provisioner
+helm repo remove nfs-subdir-external-provisioner
+kubectl delete pvc  --all
+kubectl delete pv  --all
+
+# Server3 가상머신에서 /mnt/web 하위의 디렉토리 삭제
+
+
+@슬라이드39
+https://github.com/stepanowon/nodeapp-liveness
+
+
+@슬라이드40
+k8s/probes 디렉토리의 파일 참조
+
+
+@슬라이드41
+kubectl apply -f liveness1.yaml
+
+curl -H "health: check" http://192.168.56.51/healthz
+
+kubectl delete -f liveness1.yaml
+
+
+@슬라이드42
+k8s/probes 디렉토리의 파일 참조
+
+kubectl apply -f liveness2.yaml
+
+
+@슬라이드43
+kubectl describe pods liveness2 
+
+kubectl delete -f liveness2.yaml
+
+
+@슬라이드44
+https://github.com/stepanowon/nodeapp-readiness
+
+
+@슬라이드45
+k8s/probes 디렉토리의 파일 참조
+
+
+@슬라이드46
+kubectl apply -f readiness.yaml  
+kubectl get all
+
+curl http://192.168.56.51
+
+
+@슬라이드47
+kubectl delete -f readiness.yaml
+
+
+@슬라이드49
+https://github.com/stepanowon/nodeapp-startup
+
+
+@슬라이드50
+k8s/probes 디렉토리의 startup.yaml 파일 참조
+
+
+@슬라이드51
+kubectl apply -f startup.yaml 
+
+http://192.168.56.51/healthz 
+
+kubectl get pods
+
+
+@슬라이드52
+k8s/probes 디렉토리의 startup_completed.yaml 파일 참조
+
+
+@슬라이드53
+kubectl apply -f startup.yaml 
+
+http://192.168.56.51/healthz 
+kubectl get pods
+
+kubectl delete -f startup.yaml 
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,19 @@
+### test-cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: test-cronjob
+  namespace: default
+spec:
+  schedule: "*/1 * * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: test-job
+            image: centos:8
+            command: ["bash", "-c", "echo `date`; sleep 15; echo '## Completed'; "]

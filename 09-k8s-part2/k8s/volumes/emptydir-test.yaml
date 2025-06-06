@@ -1,0 +1,36 @@
+### emptydir.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emptydir-test
+  namespace: default
+spec:
+  initContainers:
+  - name: init-service
+    image: centos:8
+    command: ["sh"]
+    args:
+      - "-c"
+      - |-
+        cat << EOF > /temp-dir/index.html
+        <html>
+        <head><title>테스트 문서</title></head>
+        <body>
+        <h2>테스트 문서</h2>
+        <hr />
+        <div>본문</div>
+        </body>
+        </html>
+        EOF
+    volumeMounts:
+    - mountPath: /temp-dir
+      name: vol1
+  containers:
+  - name: www-server
+    image: nginx:alpine
+    volumeMounts:
+    - mountPath: /usr/share/nginx/html
+      name: vol1
+  volumes:
+  - name: vol1
+    emptyDir: {}

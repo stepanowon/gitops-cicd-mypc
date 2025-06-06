@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod2
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 50
+          preference:
+            matchExpressions:
+              - key: memory
+                operator: In
+                values: ["high"]
+        - weight: 10
+          preference:
+            matchExpressions:
+              - key: core
+                operator: In
+                values: ["many"]
+  containers:
+    - name: nginx
+      image: nginx

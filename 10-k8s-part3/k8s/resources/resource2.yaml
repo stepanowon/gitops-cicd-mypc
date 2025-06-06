@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource2
+  namespace: default
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: nodeapp
+  template:
+    metadata:
+      name: nodeapp
+      labels:
+        app: nodeapp
+    spec:
+      containers:
+      - name: nodeapp-slim
+        image: stepanowon/nodeapp-slim:1.0.0
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "700Mi"
+          limits:
+            memory: "1200Mi"

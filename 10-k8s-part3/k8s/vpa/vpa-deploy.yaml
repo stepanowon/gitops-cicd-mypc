@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpa-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-deploy
+  template:
+    metadata:
+      labels:
+        app: vpa-deploy
+    spec:
+      containers:
+      - name: stress
+        image: vish/stress
+        args:
+        - -cpus
+        - "1"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"

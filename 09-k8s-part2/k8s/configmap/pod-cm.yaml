@@ -1,0 +1,32 @@
+### pod-cm.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-cm
+spec:
+  containers:
+  - name: nodeapp
+    image: stepanowon/nodeapp-cm:1.0.0
+    ports:
+    - containerPort: 8080
+    env:
+    - name: APIKEY
+      valueFrom:
+        configMapKeyRef:
+           name: myconfig
+           key: apikey
+    - name: MYSQL_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+           name: myconfig
+           key: mysql.endpoint
+    - name: DB_USERID
+      valueFrom:
+        secretKeyRef:
+          name: mysecret
+          key: db.userid
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mysecret
+          key: db.password

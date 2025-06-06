@@ -1,0 +1,14 @@
+### test-job1.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-job1
+  namespace: default
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: test-job1
+        image: centos:8
+        command: ["bash", "-c", "echo 'Hello Job!'; sleep 60; echo 'Completed'; "]

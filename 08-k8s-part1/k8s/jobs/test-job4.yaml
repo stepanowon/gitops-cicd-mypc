@@ -1,0 +1,22 @@
+### test-job4.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-job4
+  namespace: default
+spec:
+  completions: 9
+  parallelism: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: test-job4
+        image: centos:8
+        command: ["bash"]
+        args:
+          - "-c"
+          - >-
+            echo 'Hello Job!' &&
+            sleep 60 &&
+            echo 'Completed!'

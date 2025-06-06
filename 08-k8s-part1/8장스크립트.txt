@@ -1,0 +1,228 @@
+@슬라이드2
+
+git clone https://github.com/stepanowon/k8s-on-win
+cd k8s-on-win
+vagrant up
+
+vagrant reload
+
+sudo apt install virtualbox-ext-pack -y
+
+
+@슬라이드3
+
+# kubeadm을 이용한 k8s cluster 초기화
+sudo kubeadm init --apiserver-advertise-address=192.168.56.201 --pod-network-cidr=10.244.0.0/16
+
+# kubeconfig 파일을 로컬 master의 user1 사용자의 홈디렉토리에 복사
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+# kubectl 도구가 설치된 다른 컴퓨터를 이용하고 싶다면 ~/.kube/config 파일을 복사하여 사용함
+# kubectl 자동완성 기능과 kubectl --> k로 사용하기
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+echo 'alias k=kubectl' >>~/.bashrc
+echo 'complete -o default -F __start_kubectl k' >>~/.bashrc
+source ~/.bashrc
+
+# 맥에서는 echo 'alias k=kubectl' >>~/.zprofile
+source ~/.zprofile
+
+
+@슬라이드4
+
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/tigera-operator.yaml
+kubectl create -f ~/vagrant/conf/calico-resources.yaml
+
+kubectl get pods --all-namespaces
+
+
+
+@슬라이드5
+
+sudo kubeadm join 192.168.56.201:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+
+kubeadm token list
+kubeadm token create --print-join-command
+
+kubectl get nodes
+
+
+@슬라이드12
+
+kubectl run nodeapp --image stepanowon/nodeapp:1.0.0 --port=8080
+
+k8s/pods 디렉토리의 파일 참조
+
+kubectl apply -f  nodeapp-pod.yaml
+
+
+@슬라이드13
+
+kubectl get pods
+kubectl exec -it nodeapp -- /bin/bash
+curl localhost:8080
+
+kubectl delete pods nodeapp
+
+
+@슬라이드14
+
+k8s/pods 디렉토리의 파일 참조
+
+kubectl apply -f nodeapp-deploy.yaml
+
+
+@슬라이드20
+k8s/services 디렉토리의 파일 참조
+
+kubectl apply -f nodeapp-cip.yaml
+kubectl delete service nodeapp-cip
+
+
+@슬라이드21
+k8s/services 디렉토리의 파일 참조
+
+# 노드 IP 확인
+kubectl get nodes -o wide
+#서비스 시작
+kubectl apply -f nodeapp-np.yaml
+# 서비스의 Port 확인
+kubectl get services
+#nodeport 테스트
+curl  노드아이피주소:서비스포트
+
+# 테스트후 서비스 삭제
+kubectl delete services nodeapp-np
+
+
+@슬라이드25
+# kube-proxy의 strictARP 설정값을 true로 변경
+kubectl get configmap kube-proxy -n kube-system -o yaml | \
+  sed -e "s/strictARP: false/strictARP: true/" | kubectl apply -f - -n kube-system
+
+# yaml 파일을 이용해 metalLB 설치
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml
+
+# 설치된 metalLB 요소 확인. 모든 pod가 Running 상태가 되는 것을 확인
+kubectl get all -n metallb-system
+
+
+@슬라이드26
+# 마스터에서 실행
+kubectl apply -f  ~/vagrant/config/ip-addr-pool.yaml
+
+
+@슬라이드27
+k8s/services 디렉토리의 파일 참조
+
+kubectl apply -f nodeapp-lb.yaml
+
+
+@슬라이드28
+
+kubectl get services
+curl 192.168.56.51
+
+kubectl delete services nodeapp-lb
+kubectl delete deploy nodeapp-deploy
+
+
+@슬라이드31
+
+# helm repo 추가 후 업데이트
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+# ingress-nginx 네임스페이스 ingress-controller 설치
+# service 타입을 LB로 설정하고 LB의 IP 주소를 192.168.56.60으로 설정. 이를 위해 metalLB가 미리 설정되어야 함
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --set controller.service.type=LoadBalancer \
+  --set controller.service.loadBalancerIP=192.168.56.60
+  --set controller.progressDeadlineSeconds=600
+
+
+@슬라이드32
+kubectl get all -n ingress-nginx
+
+
+@슬라이드33
+kubectl apply -f nodeapp1.yaml
+kubectl apply -f nodeapp2.yaml
+
+
+@슬라이드34
+kubectl apply -f nodeapp-ingress.yaml
+
+
+@슬라이드37
+curl http://demo.192.168.56.60.nip.io/path1/abc
+curl http://demo.192.168.56.60.nip.io/path2/abc
+
+
+@슬라이드38
+kubectl delete -f nodeapp1.yaml
+kubectl delete -f nodeapp2.yaml
+kubectl delete -f nodeapp-ingress.yaml
+
+helm uninstall ingress-nginx -n ingress-nginx
+kubectl delete ns ingress-nginx
+
+
+@슬라이드41
+kubectl api-resources
+
+
+@슬라이드43
+k8s/jobs 디렉토리의 파일 참조
+
+kubectl apply -f test-job1.yaml
+
+
+@슬라이드44
+kubectl describe jobs test-job1
+kubectl delete jobs test-job1
+
+
+@슬라이드45
+k8s/jobs 디렉토리의 파일 참조
+
+kubectl apply -f test-job2.yaml
+kubectl delete jobs test-job2 
+
+https://yaml-multiline.info/
+
+
+@슬라이드46
+k8s/jobs 디렉토리의 파일 참조
+
+kubectl apply -f test-job3.yaml
+kubectl delete jobs test-job3
+
+
+@슬라이드47
+k8s/jobs 디렉토리의 파일 참조
+
+kubectl apply -f test-job4.yaml
+kubectl delete jobs test-job4
+
+@슬라이드48
+k8s/jobs 디렉토리의 파일 참조
+
+kubectl apply -f test-cronjob.yaml
+kubectl delete cronjobs test-cronjob
+
+
+
+
+
+
+
+
+
+
+
+
+

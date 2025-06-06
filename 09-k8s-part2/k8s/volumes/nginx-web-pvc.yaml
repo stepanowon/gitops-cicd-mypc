@@ -1,0 +1,43 @@
+# nginx-web-pvc.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-web-pvc
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-web-pvc
+  template:
+    metadata:
+      name: nodeap
+      labels:
+        app: nginx-web-pvc
+    spec:
+      containers:
+      - name: ngninx-container
+        image: nginx
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: logs-vol
+          mountPath: /var/log/nginx
+      volumes:
+      - name: logs-vol
+        persistentVolumeClaim:
+          claimName: store-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-lb-pvc
+  namespace: default
+spec:
+  type: LoadBalancer
+  ports:
+    - name: lb-port
+      port: 80
+      targetPort: 80
+  selector:
+    app: nginx-web-pvc

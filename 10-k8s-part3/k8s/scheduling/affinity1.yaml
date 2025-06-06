@@ -1,0 +1,30 @@
+# 예제1 : memory < 6인 노드에 스케줄링
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeapp
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nodeapp
+  template:
+    metadata:
+      name: nodeapp
+      labels:
+        app: nodeapp
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: memory
+                operator: Lt
+                values: [ "6" ]
+      containers:
+      - name: nodeapp
+        image: stepanowon/nodeapp-slim:1.0.0
+        ports:
+        - containerPort: 8080

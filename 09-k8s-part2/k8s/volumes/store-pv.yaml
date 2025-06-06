@@ -1,0 +1,20 @@
+# store-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: store-pv
+  labels:
+    type: nfs
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: logs
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 192.168.56.103    # nfs server의 IP
+    path: /mnt/nfs
+  mountOptions:
+    - nfsvers=4.2
+
