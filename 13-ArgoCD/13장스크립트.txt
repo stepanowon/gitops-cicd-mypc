@@ -1,0 +1,210 @@
+@슬라이드5
+
+//ArgoCD 설치
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+//ArgoCD를 외부에서 접속할 수 있도록 API 서버를 외부에 노출시켜야 함. 
+//이를 위해 Service Type을 LoadBalancer로 변경함
+kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+
+curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+rm argocd-linux-amd64
+
+argocd admin initial-password -n argocd
+
+
+@슬라이드6
+argocd login 192.168.56.51
+
+
+@슬라이드7
+kubectl edit configmap argocd-cm -n argocd
+
+data: 
+   accounts.user1: apiKey, login
+
+//다음 명령어로 admin 계정으로 로그인하고 패스워드를 변경함
+argocd login 192.168.56.51
+
+argocd account update-password  \
+  --account user1  \
+  --current-password adminpwd  \
+  --new-password user1pwd
+
+
+@슬라이드8
+kubectl edit configmap argocd-rbac-cm -n argocd
+
+data:
+  policy.csv: |
+    g, user1, role:admin
+  policy.default: role.readonly
+
+data:
+  policy.csv: |
+    g, user1, role:admin
+    g, user2, role:managers
+    p, role:managers, applications, get, */*, allow
+    p, role:managers, applications, update, */*, allow
+  policy.default: role:''
+
+argocd logout 192.168.56.51
+argocd login 192.168.56.51
+
+
+@슬라이드11
+CURRENT_CONTEXT=`kubectl config view -o jsonpath='{.current-context}'`
+argocd cluster add $CURRENT_CONTEXT
+
+
+@슬라이드12
+
+git clone https://github.com/[깃헙사용자명]/k8s-infra
+
+https://github.com/stepanowon/gitops-cicd-mypc/tree/main/13-ArgoCD/k8s-infra-resource
+
+git add . && git commit -m 'argocd를 위한 초기화' && git push
+
+
+@슬라이드26
+
+# values-image-updater.yaml
+config:
+  argocd:
+    grpcWeb: true
+    serverAddress: "ARGOCD서버주소"    # 예시: 192.168.56.51,   'https://'는 지정하지 않음
+    insecure: true
+    plaintext: false
+  logLevel: debug
+  registries:     # Docker Hub는 이 설정 필요없음. Docker Hub가 아닌 레지스트리만 등록
+    - name: nexus1
+      api_url: "http://192.168.56.103:8082"
+      prefix:  "192.168.56.103:8082"
+      ping: true
+      insecure: false
+      credentials: "secret:argocd/nexus-cred"		# 형식 : "secret:네임스페이스/시크릿명"
+
+
+@슬라이드27
+
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update argo
+
+helm install argocd-image-updater argo/argocd-image-updater \
+--namespace argocd \
+--values values-image-updater.yaml
+
+
+kubectl edit deployment argocd-image-updater -n argocd
+
+     spec:
+       containers:
+       - args:
+         - run
+         - --interval
+         - 10s
+
+
+@슬라이드28
+
+// docker hub에서 발급받은 token을 password로 입력함
+kubectl create secret docker-registry dockerhub-cred -n argocd \
+--docker-server=registry.docker.io \
+--docker-username=도커허브사용자명  \
+--docker-password=도커허브토큰
+
+# kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- nodeapp-deploy.yaml
+- nodeapp-svc.yaml
+
+
+@슬라이드29
+
+argocd-image-updater.argoproj.io/image-list=myapp=[dockerhub-id]/nodeapp-git
+argocd-image-updater.argoproj.io/myapp.force-update=true 
+argocd-image-updater.argoproj.io/myapp.pull-secret=argocd/dockerhub-cred
+argocd-image-updater.argoproj.io/myapp.update-strategy=semver 
+argocd-image-updater.argoproj.io/write-back-method=argocd
+
+
+@슬라이드30
+# argocd image updater 재시작
+kubectl rollout restart deployment argocd-image-updater -n argocd
+
+# argocd image updater 로그 조회
+kubectl logs -n argocd $(kubectl get pods -n argocd -o jsonpath="{.items[*].metadata.name}" | tr ' ' '\n' | grep argocd-image-updater)
+
+
+@슬라이드31
+kubectl logs -n argocd $(kubectl get pods -n argocd -o jsonpath="{.items[*].metadata.name}" | tr ' ' '\n' | grep argocd-image-updater) --since 2m
+
+
+@슬라이드 43
+
+kubectl edit configmap argocd-rbac-cm -n argocd
+
+# argocd-admins 그룹은 admin 권한 : role:admin.   role:admin은 argocd 에 내장된 Role
+# argocd-managers 그룹에는 role:managers 로 연결하여 삭제권한을 부여하지 않았음.
+data:
+  policy.default: role:readonly
+  policy.csv: |
+    g, argocd-admins, role:admin
+    g, argocd-managers, role:managers
+    p, role:managers, applications, delete, */*, deny
+    p, role:managers, applications, *, */*, allow
+    p, role:managers, projects, delete, *, deny
+    p, role:managers, projects, *, *, allow
+    p, role:managers, logs, get, */*, allow
+    p, role:managers, exec, create, */*, allow
+
+
+
+@슬라이드44
+
+kubectl edit configmap argocd-cm -n argocd
+
+# keycloak 서버의 루트 인증서를 지정하는 이유는 현재 keycloak 서버의 인증서가 사설 인증서이기 때문임.
+# keycloak 서버를 인증서를 서명할 때 k8s의 root 인증서를 사용했기 때문에 k8s 루트인증서를 지정함 
+# keycloak 서버의 인증서가 공인 인증서라면 rootCA 필드는 지정할 필요없음
+# k8s 루트인증서 경로 : /etc/Kubernetes/pki/ca.crt
+data:
+  url: https://argocd.192.168.56.51.nip.io
+  oidc.config: |
+    name: Keycloak
+    issuer: https://keycloak.ssamz.192.168.56.80.nip.io/realms/argocd-realm
+    clientID: argocd
+    requestedScopes: ["openid", "groups"]
+    enablePKCEAuthentication: true
+    rootCA: |
+      -----BEGIN CERTIFICATE-----
+      (여기에 Keycloak 서버의 루트 인증서 내용)
+      -----END CERTIFICATE-----
+
+
+kubectl rollout restart deployment argocd-server -n argocd
+
+
+
+@슬라이드48
+# argocd 삭제
+kubectl delete -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl delete namespace argocd
+
+# keycloak 삭제
+helm uninstall keycloak -n keycloak
+helm uninstall ingress-nginx -n ingress-nginx
+
+kubectl delete ns keycloak
+kubectl delete ns ingress-nginx
+
+
+
+
+
+
+

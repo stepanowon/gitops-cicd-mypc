@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeapp-deploy2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodeapp
+  template:
+    metadata:
+      labels:
+        app: nodeapp
+    spec:
+      containers:
+        - name: nodeapp-container
+          image: 도커사용자명/nodeapp:1.0.0
+      imagePullSecrets:
+        - name: dockerhub-cred

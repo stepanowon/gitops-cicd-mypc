@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rollouts-demo
+spec:
+  ingressClassName: nginx
+  rules:
+  # external ip가 192.168.56.52 인경우의 예시
+  # 내부 DNS nip.io 사용
+  - host: example.com.192.168.56.52.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: rollouts-demo
+            port: 
+              number: 80

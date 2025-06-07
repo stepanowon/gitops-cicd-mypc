@@ -1,0 +1,207 @@
+@슬라이드3
+
+# rolling.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeapp-deploy
+  labels:
+    app: nodeapp
+  annotations:
+    kubernetes.io/change-cause: "1.0.0"
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: nodeapp
+  template:
+    metadata:
+      labels:
+        app: nodeapp
+    spec:
+      containers:
+      - name: nodeapp
+        image: stepanowon/nodeapp:1.0.0
+        ports:
+        - containerPort: 8080
+
+
+@슬라이드4
+kubectl apply -f rolling.yaml    
+
+kubectl set image deployment/nodeapp-deploy nodeapp=stepanowon/nodeapp:2.0.0  
+kubectl annotate deployments.apps nodeapp-deploy kubernetes.io/change-cause="2.0.0"
+
+kubectl describe deploy nodeapp-deploy
+
+
+
+@슬라이드5
+kubectl set image deployment/nodeapp-deploy nodeapp=stepanowon/nodeapp:3.0.0  
+kubectl annotate deployments.apps nodeapp-deploy kubernetes.io/change-cause="3.0.0"
+
+kubectl rollout history deploy nodeapp-deploy  
+kubectl rollout history deploy nodeapp-deploy --revision=1
+
+
+@슬라이드6
+kubectl rollout undo deploy nodeapp-deploy --to-revision=1
+kubectl rollout history deploy nodeapp-deploy
+
+kubectl delete deploy nodeapp-deploy
+
+
+@슬라이드13
+## 윈도우 우분투 설치 기준
+# Argo Rollout 설치
+kubectl create namespace argo-rollouts
+kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+
+# kubectl Plugin 설치
+curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+chmod +x ./kubectl-argo-rollouts-linux-amd64
+sudo mv ./kubectl-argo-rollouts-linux-amd64  /usr/local/bin/kubectl-argo-rollouts
+
+# kubectl Plugin 테스트
+kubectl argo rollouts version
+
+
+@슬라이드14
+
+kubectl argo rollouts dashboard
+
+
+@슬라이드15
+rollouts/canary1 디렉토리의 파일 참조
+
+
+@슬라이드19
+kubectl argo rollouts set image rollouts-demo rollouts-demo=argoproj/rollouts-demo:green
+
+
+@슬라이드20
+# 다음  step으로 promote
+kubectl argo rollouts promote rollouts-demo
+# 배포 중단, 롤백
+kubectl argo rollouts abort rollouts-demo
+
+# 리소스 정리
+kubectl delete -f rollout.yaml
+kubectl delete -f service.yaml
+
+
+@슬라이드21
+rollouts/bluegreen 디렉토리의 파일 참조
+
+kubectl apply -f service-active.yaml
+kubectl apply -f service-preview.yaml
+
+
+@슬라이드22
+rollouts/bluegreen 디렉토리의 파일 참조
+
+kubectl apply -f rollout-bluegreen.yaml
+
+
+@슬라이드24
+kubectl argo rollouts set image rollout-bluegreen  rollout-bluegreen=argoproj/rollouts-demo:green
+
+
+@슬라이드26
+# 새버전으로 Promoting
+kubectl argo rollouts promote rollout-bluegreen
+# 새버전으로 Rollout 중단
+kublectl argo rollouts abort rollout-bluegreen
+# 특정 Revision으로 돌아가고 싶다면
+kubectl argo rollouts undo rollout-bluegreen  --to-revision=1
+
+
+# 리소스 정리
+kubectl delete -f service-active.yaml
+kubectl delete -f service-preview.yaml  
+kubectl delete -f rollout-bluegreen.yaml
+
+
+@슬라이드29
+
+kubectl create namespace ingress-nginx
+kubectl create namespace prometheus
+
+# Helm 리포지토리 등록
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo add bitnami https://charts.bitnami.com/bitnami 
+helm repo update
+
+# prometheus 서버를 제외한 node exporter, kube-state-metrics, alert manager 등 설치
+helm upgrade -i -n prometheus kube-prometheus bitnami/kube-prometheus
+
+# ingress-nginx-controller 설치, prometheus 관련 설정 포함 
+helm upgrade -i -n ingress-nginx ingress-nginx ingress-nginx/ingress-nginx  \
+  --set controller.ingressClassResource.name=nginx \
+  --set controller.ingressClassResource.controllerValue="example.com/ingress-nginx" \
+  --set controller.ingressClassResource.enabled=true \
+  --set controller.ingressClassByName=true \
+  --set controller.metrics.enabled=true \
+  --set-string controller.podAnnotations."prometheus\.io/scrape"="true" \
+  --set-string controller.podAnnotations."prometheus\.io/port"="10254"
+  --set controller.progressDeadlineSeconds=600
+
+# prometheus-server를 ingress-nginx namespace에 설치
+kubectl apply --kustomize github.com/kubernetes/ingress-nginx/deploy/prometheus/
+
+
+@슬라이드30
+
+# prometheus 네임스페이스 확인
+kubectl get pods,svc -n prometheus
+
+# ingress-nginx 네임스페이스 확인 --> ingress-nginx-controller 서비스의 external-ip 값 확인
+kubectl get pods,svc -n ingress-nginx
+
+
+@슬라이드31~33
+rollouts/canary2 디렉토리의 파일 확인
+
+
+@슬라이드34
+kubectl apply -f analysis.yaml
+kubectl apply -f rollout.yaml
+kubectl apply -f service.yaml
+kubectl apply -f ingress.yaml
+
+# 각각 별도의 터미널을 열어서 다음 명령어를 하나씩 실행
+kubectl argo rollouts get rollout rollouts-demo --watch
+kubectl argo rollouts dashboard
+
+
+@슬라이드35
+rollouts/canary2 디렉토리의 파일 확인
+
+# 권한 설정
+chmod +x load-nginx.sh
+# 실행(별도 터미널 창을 하나 더 열어서...)
+./load-nginx.sh
+
+
+@슬라이드40
+# 다음 명령 실행 창3개 중단(터미널에서 실행하던 기능 실행 중단)
+./load-nginx.sh 
+kubectl argo rollouts get rollout rollouts-demo --watch  
+kubectl argo rollouts dashboard
+
+# 리소스 정리
+kubectl delete -f ingress.yaml
+kubectl delete -f service.yaml
+kubectl delete -f rollout.yaml
+kubectl delete -f analysis.yaml
+
+# nginx-ingress, prometheus 요소 언인스톨
+helm uninstall ingress-nginx -n ingress-nginx
+helm uninstall kube-prometheus -n prometheus
+
+# namespace 삭제
+kubectl delete ns ingress-nginx
+kubectl delete ns prometheus
+
+
+

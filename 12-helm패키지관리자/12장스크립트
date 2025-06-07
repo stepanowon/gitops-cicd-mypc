@@ -1,0 +1,127 @@
+@슬라이드5
+helm search hub fluent-bit
+helm search hub fluent-bit --list-repo-url
+
+helm repo list 
+
+helm repo add bitnami https://charts.bitnami.com/bitnami 
+helm repo update
+
+helm search repo fluent-bit
+
+
+@슬라이드6
+helm install fluent-bit bitnami/fluent-bit
+helm upgrade -i fluent-bit bitnami/fluent-bit
+
+helm status fluent-bit
+helm pull bitnami/fluent-bit
+
+helm rollback fluent-bit 1
+helm list
+helm uninstall fluent-bit
+
+helm create mychart
+
+
+@슬라이드11
+
+#values.yaml
+
+image:  
+   repository: stepanowon/nodeapp-slim
+   pullPolicy: IfNotPresent  
+   ...... 
+   tag: "1.0.0"
+......(생략)
+service:
+   type: LoadBalancer
+   port: 8080
+
+
+helm upgrade --install myapp mychart
+kubectl get pods,svc
+
+
+@슬라이드12
+curl 192.168.56.51:8080
+
+helm upgrade --install myapp mychart
+
+
+@슬라이드 13
+kubectl get pods
+
+helm rollback myapp 1
+
+helm uninstall myapp
+
+
+@슬라이드15~16
+cd ~
+git clone https://github.com/깃헙사용자명/test-charts
+
+# charts 디렉토리 생성
+cd ~/test-charts
+mkdir charts && cd charts
+
+# 차트 생성
+helm create mychart
+
+# 차트 패키징, 인덱스 생성
+helm package mychart
+helm repo index . --url https://깃헙사용자명.github.io/test-charts/charts
+
+cd ~/test-charts
+git add .
+git commit -m 'initial commit'
+git push
+
+
+@슬라이드18
+helm repo add test-charts https://깃헙사용자명.github.io/test-charts/charts
+helm repo update
+
+# release명을 myapp으로 설치
+helm install myapp test-charts/mychart
+
+# 설치된 pods 확인 : 1 pod
+kubectl get pods
+
+
+@슬라이드19
+cd ~/test-charts
+
+# 다음 명령어로 values.yaml과 Chart.yaml 편집
+# values.yaml 에서 replicaCount를 1에서 2로 수정
+# Chart.yaml 에서 version을 0.1.0에서 0.1.1로 수정
+vi charts/mychart/values.yaml
+vi charts/mychart/Chart.yaml
+
+# 패키징, 인덱싱
+cd ~/test-charts/charts
+helm package mychart
+helm repo index . --url https://stephenwon.github.io/test-charts/charts
+
+# git hub에 업데이트
+cd ~/test-charts
+git add .
+git commit -m '0.1.1 : replica 2'
+git push
+
+
+@슬라이드20
+# helm 리포지토리 업데이트, 업그레이드
+helm repo update
+helm upgrade myapp test-charts/mychart
+
+# replicaCount 적용 여부 확인 -> pod 갯수 확인 : 1-->2
+kubectl get pods 
+
+helm uninstall myapp
+
+
+
+
+
+
