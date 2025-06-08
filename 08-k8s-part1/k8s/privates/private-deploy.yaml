@@ -15,3 +15,4 @@ spec:
       containers:
         - name: nodeapp-container
           image: 도커사용자명/nodeapp:1.0.0
+          imagePullPolicy: Always
