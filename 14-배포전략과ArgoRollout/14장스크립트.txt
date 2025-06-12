@@ -51,7 +51,7 @@ kubectl rollout history deploy nodeapp-deploy
 kubectl delete deploy nodeapp-deploy
 
 
-@슬라이드13
+@슬라이드14
 ## 윈도우 우분투 설치 기준
 # Argo Rollout 설치
 kubectl create namespace argo-rollouts
@@ -66,20 +66,20 @@ sudo mv ./kubectl-argo-rollouts-linux-amd64  /usr/local/bin/kubectl-argo-rollout
 kubectl argo rollouts version
 
 
-@슬라이드14
+@슬라이드15
 
 kubectl argo rollouts dashboard
 
 
-@슬라이드15
+@슬라이드16
 rollouts/canary1 디렉토리의 파일 참조
 
 
-@슬라이드19
+@슬라이드20
 kubectl argo rollouts set image rollouts-demo rollouts-demo=argoproj/rollouts-demo:green
 
 
-@슬라이드20
+@슬라이드21
 # 다음  step으로 promote
 kubectl argo rollouts promote rollouts-demo
 # 배포 중단, 롤백
@@ -90,24 +90,24 @@ kubectl delete -f rollout.yaml
 kubectl delete -f service.yaml
 
 
-@슬라이드21
+@슬라이드22
 rollouts/bluegreen 디렉토리의 파일 참조
 
 kubectl apply -f service-active.yaml
 kubectl apply -f service-preview.yaml
 
 
-@슬라이드22
+@슬라이드23
 rollouts/bluegreen 디렉토리의 파일 참조
 
 kubectl apply -f rollout-bluegreen.yaml
 
 
-@슬라이드24
+@슬라이드25
 kubectl argo rollouts set image rollout-bluegreen  rollout-bluegreen=argoproj/rollouts-demo:green
 
 
-@슬라이드26
+@슬라이드27
 # 새버전으로 Promoting
 kubectl argo rollouts promote rollout-bluegreen
 # 새버전으로 Rollout 중단
@@ -122,7 +122,7 @@ kubectl delete -f service-preview.yaml
 kubectl delete -f rollout-bluegreen.yaml
 
 
-@슬라이드29
+@슬라이드30
 
 kubectl create namespace ingress-nginx
 kubectl create namespace prometheus
@@ -150,7 +150,7 @@ helm upgrade -i -n ingress-nginx ingress-nginx ingress-nginx/ingress-nginx  \
 kubectl apply --kustomize github.com/kubernetes/ingress-nginx/deploy/prometheus/
 
 
-@슬라이드30
+@슬라이드31
 
 # prometheus 네임스페이스 확인
 kubectl get pods,svc -n prometheus
@@ -159,11 +159,11 @@ kubectl get pods,svc -n prometheus
 kubectl get pods,svc -n ingress-nginx
 
 
-@슬라이드31~33
+@슬라이드32~34
 rollouts/canary2 디렉토리의 파일 확인
 
 
-@슬라이드34
+@슬라이드35
 kubectl apply -f analysis.yaml
 kubectl apply -f rollout.yaml
 kubectl apply -f service.yaml
@@ -174,7 +174,7 @@ kubectl argo rollouts get rollout rollouts-demo --watch
 kubectl argo rollouts dashboard
 
 
-@슬라이드35
+@슬라이드36
 rollouts/canary2 디렉토리의 파일 확인
 
 # 권한 설정
@@ -183,7 +183,7 @@ chmod +x load-nginx.sh
 ./load-nginx.sh
 
 
-@슬라이드40
+@슬라이드41~42
 # 다음 명령 실행 창3개 중단(터미널에서 실행하던 기능 실행 중단)
 ./load-nginx.sh 
 kubectl argo rollouts get rollout rollouts-demo --watch  
@@ -203,5 +203,7 @@ helm uninstall kube-prometheus -n prometheus
 kubectl delete ns ingress-nginx
 kubectl delete ns prometheus
 
-
+# argo rollouts 리소스 정리
+kubectl delete -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+kubectl delete namespace argo-rollouts
 
