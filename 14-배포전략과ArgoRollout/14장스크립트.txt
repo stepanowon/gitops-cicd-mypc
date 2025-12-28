@@ -182,6 +182,9 @@ chmod +x load-nginx.sh
 # 실행(별도 터미널 창을 하나 더 열어서...)
 ./load-nginx.sh
 
+@슬라이드37
+kubectl argo rollouts set image rollouts-demo rollouts-demo=argoproj/rollouts-demo:green
+
 
 @슬라이드41~42
 # 다음 명령 실행 창3개 중단(터미널에서 실행하던 기능 실행 중단)
