@@ -32,7 +32,7 @@ source ~/.zprofile
 
 @슬라이드4
 
-kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/tigera-operator.yaml
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.5/manifests/tigera-operator.yaml
 kubectl create -f ~/vagrant/conf/calico-resources.yaml
 
 kubectl get pods --all-namespaces
@@ -132,20 +132,24 @@ kubectl delete deploy nodeapp-deploy
 @슬라이드31
 
 # helm repo 추가 후 업데이트
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo add haproxytech https://haproxytech.github.io/helm-charts
 helm repo update
+
+# namespace 생성
+kubectl create namespace haproxy-controller
 
 # ingress-nginx 네임스페이스 ingress-controller 설치
 # service 타입을 LB로 설정하고 LB의 IP 주소를 192.168.56.60으로 설정. 이를 위해 metalLB가 미리 설정되어야 함
-helm install ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx --create-namespace \
+helm upgrade -i -n haproxy-controller haproxy-ingress haproxytech/kubernetes-ingress \
   --set controller.service.type=LoadBalancer \
-  --set controller.service.loadBalancerIP=192.168.56.60
-  --set controller.progressDeadlineSeconds=600
+  --set controller.service.loadBalancerIP=192.168.56.60 \
+  --set controller.ingressClass=haproxy \
+  --set controller.ingressClassResource.name=haproxy \
+  --set controller.ingressClassResource.enabled=true
 
 
 @슬라이드32
-kubectl get all -n ingress-nginx
+kubectl get all -n haproxy-controller
 
 
 @슬라이드33
@@ -154,8 +158,7 @@ kubectl apply -f nodeapp2.yaml
 
 
 @슬라이드34
-kubectl apply -f nodeapp-ingress.yaml
-
+kubectl apply -f  haproxy-ingress-pathrewrite.yaml
 
 @슬라이드37
 curl http://demo.192.168.56.60.nip.io/path1/abc
@@ -163,12 +166,14 @@ curl http://demo.192.168.56.60.nip.io/path2/abc
 
 
 @슬라이드38
+kubectl delete -f haproxy-ingress-pathrewrite.yaml
+
 kubectl delete -f nodeapp1.yaml
 kubectl delete -f nodeapp2.yaml
-kubectl delete -f nodeapp-ingress.yaml
 
-helm uninstall ingress-nginx -n ingress-nginx
-kubectl delete ns ingress-nginx
+helm uninstall haproxy-ingress -n haproxy-controller
+kubectl delete namespaces haproxy-controller
+
 
 
 @슬라이드41
