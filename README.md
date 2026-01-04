@@ -91,7 +91,7 @@ spec:
     method: "argocd"
   # 대상 Application 선택
   applicationRefs:
-    - namePattern: "nodeapp-git-app"
+    - namePattern: "nodeapp-cd-test-app"
       images:
         - alias: "nodeapp-git"
           imageName: "stephenwon/nodeapp-git"
