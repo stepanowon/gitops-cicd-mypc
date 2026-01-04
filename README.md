@@ -1,6 +1,6 @@
 # 2026.1 변경 사항
-- 1. [Argocd Image updater가 0.14.0에서 1.0으로 업그레이드](#imageupdater)
-- 2. [Ingress Nginx Controller 지원종료로 인해 haproxy-ingress-controller로 교체](#haproxy)
+- [Argocd Image updater가 0.14.0에서 1.0으로 업그레이드](#imageupdater)
+- [Ingress Nginx Controller 지원종료로 인해 haproxy-ingress-controller로 교체](#haproxy)
 ---
 <a id="imageupdater"></a>
 ## Argocd Image updater가 0.14.0에서 1.0으로 업그레이드되었습니다.
