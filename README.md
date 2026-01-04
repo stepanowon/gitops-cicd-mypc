@@ -1,6 +1,9 @@
-# 변경 사항
+# 2026.1 변경 사항
+- 1. [Argocd Image updater가 0.14.0에서 1.0으로 업그레이드](#imageupdater)
+- 2. [Ingress Nginx Controller 지원종료로 인해 haproxy-ingress-controller로 교체](#haproxy)
 ---
-### Argocd Image updater가 0.14.0에서 1.0으로 업그레이드되었습니다.
+<a id="imageupdater"></a>
+## Argocd Image updater가 0.14.0에서 1.0으로 업그레이드되었습니다.
 #### 기존 버전을 사용하려면
 - helm으로 argocd image updater를 설치할 때 다음 명령문을 실행하도록 설정하세요.
 ```
@@ -112,3 +115,8 @@ kubectl logs -n argocd $(kubectl get pods -n argocd -o jsonpath="{.items[*].meta
 @슬라이드31
 kubectl logs -n argocd $(kubectl get pods -n argocd -o jsonpath="{.items[*].metadata.name}" | tr ' ' '\n' | grep argocd-image-updater-controller) --since 2m
 ```
+
+<a id="haproxy"></a>
+## HAProxy Ingress Controller 적용하기
+- Ingress Nginx Controller를 대신해 사용할 수 있는 Ingress Controller입니다.
+- Ingress Nginx Controller는 지원이 종료되었습니다.(관련된 문서를 보려면 [여기](https://nginxstore.com/blog/kubernetes/ingress-nginx-%EC%A7%80%EC%9B%90-%EC%A2%85%EB%A3%8C-%EC%95%88%EB%82%B4-kubernetes-ingress-controller/)를 클릭하세요)
