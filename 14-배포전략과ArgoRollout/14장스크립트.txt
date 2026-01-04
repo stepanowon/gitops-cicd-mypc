@@ -124,39 +124,34 @@ kubectl delete -f rollout-bluegreen.yaml
 
 @슬라이드30
 
-kubectl create namespace ingress-nginx
-kubectl create namespace prometheus
-
-# Helm 리포지토리 등록
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo add bitnami https://charts.bitnami.com/bitnami 
+# Namespace 생성, Helm 리포지토리 등록
+kubectl create namespace haproxy-controller
+helm repo add haproxytech https://haproxytech.github.io/helm-charts
 helm repo update
 
-# prometheus 서버를 제외한 node exporter, kube-state-metrics, alert manager 등 설치
-helm upgrade -i -n prometheus kube-prometheus bitnami/kube-prometheus
-
-# ingress-nginx-controller 설치, prometheus 관련 설정 포함 
-helm upgrade -i -n ingress-nginx ingress-nginx ingress-nginx/ingress-nginx  \
-  --set controller.ingressClassResource.name=nginx \
-  --set controller.ingressClassResource.controllerValue="example.com/ingress-nginx" \
+# haproxy-ingress-controller 설치, prometheus 관련 설정 포함 
+helm upgrade -i -n haproxy-controller haproxy-ingress haproxytech/kubernetes-ingress \
+  --set controller.service.type=LoadBalancer \
+  --set controller.service.loadBalancerIP=192.168.56.60 \
+  --set controller.ingressClass=haproxy \
+  --set controller.ingressClassResource.name=haproxy \
   --set controller.ingressClassResource.enabled=true \
-  --set controller.ingressClassByName=true \
   --set controller.metrics.enabled=true \
+  --set controller.metrics.service.type=ClusterIP \
+  --set controller.metrics.service.port=1024 \
   --set-string controller.podAnnotations."prometheus\.io/scrape"="true" \
-  --set-string controller.podAnnotations."prometheus\.io/port"="10254"
-  --set controller.progressDeadlineSeconds=600
+  --set-string controller.podAnnotations."prometheus\.io/port"="1024" \
+  --set-string controller.podAnnotations."prometheus\.io/path"="/metrics"
 
-# prometheus-server를 ingress-nginx namespace에 설치
-kubectl apply --kustomize github.com/kubernetes/ingress-nginx/deploy/prometheus/
+# Prometheus server 설치
+kubectl apply -f \
+   https://raw.githubusercontent.com/stepanowon/gitops-cicd-mypc/refs/heads/main/prometheus-server.yaml
 
 
 @슬라이드31
 
-# prometheus 네임스페이스 확인
-kubectl get pods,svc -n prometheus
-
-# ingress-nginx 네임스페이스 확인 --> ingress-nginx-controller 서비스의 external-ip 값 확인
-kubectl get pods,svc -n ingress-nginx
+# haproxy-controller 네임스페이스 확인
+kubectl get all -n haproxy-controller
 
 
 @슬라이드32~34
@@ -178,9 +173,9 @@ kubectl argo rollouts dashboard
 rollouts/canary2 디렉토리의 파일 확인
 
 # 권한 설정
-chmod +x load-nginx.sh
+chmod +x load-haproxy.sh
 # 실행(별도 터미널 창을 하나 더 열어서...)
-./load-nginx.sh
+./load-haproxy.sh
 
 @슬라이드37
 kubectl argo rollouts set image rollouts-demo rollouts-demo=argoproj/rollouts-demo:green
@@ -188,25 +183,22 @@ kubectl argo rollouts set image rollouts-demo rollouts-demo=argoproj/rollouts-de
 
 @슬라이드41~42
 # 다음 명령 실행 창3개 중단(터미널에서 실행하던 기능 실행 중단)
-./load-nginx.sh 
-kubectl argo rollouts get rollout rollouts-demo --watch  
-kubectl argo rollouts dashboard
-
-# 리소스 정리
 kubectl delete -f ingress.yaml
 kubectl delete -f service.yaml
 kubectl delete -f rollout.yaml
 kubectl delete -f analysis.yaml
 
-# nginx-ingress, prometheus 요소 언인스톨
-helm uninstall ingress-nginx -n ingress-nginx
-helm uninstall kube-prometheus -n prometheus
+# Prometheus-server, haproxy-ingress-controller 삭제
+kubectl delete -f \
+   https://raw.githubusercontent.com/stepanowon/gitops-cicd-mypc/refs/heads/main/Prometheus-server.yaml
+helm uninstall -n haproxy-controller haproxy-ingress
 
 # namespace 삭제
-kubectl delete ns ingress-nginx
-kubectl delete ns prometheus
+kubectl delete ns haproxy-controller
+
 
 # argo rollouts 리소스 정리
 kubectl delete -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
 kubectl delete namespace argo-rollouts
+
 
