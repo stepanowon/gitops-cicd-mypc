@@ -7,16 +7,12 @@ spec:
   - name: service-name
   metrics:
   - name: success-rate
-    # 1분 간격으로 분석 쿼리 실행
     interval: 1m
-    # 쿼리(query) 결과가 0.98 이상이면 성공으로 간주. 0.98이하의 결과가 3번 리턴되면 실패로 간주
-    # 쿼리 내용 : 최근 3분 동안의 성공 요청수 / 최근 3분 동안의 전체 요청 수
-    # 요청 성공 기준 : HTTP 응답 Status Code가 2XX, 3XX 인 경우
     successCondition: result[0] >= 0.98
     failureLimit: 2
     provider:
       prometheus:
-        address: http://prometheus-server.ingress-nginx.svc.cluster.local:9090
+        address: http://prometheus-server.haproxy-controller.svc.cluster.local:9090
         query: |
-          sum(rate(nginx_ingress_controller_requests{service="{{args.service-name}}", status=~"2.*|3.*"}[3m])) / 
-          sum(rate(nginx_ingress_controller_requests{service="{{args.service-name}}"}[3m])) 
+          sum(rate(haproxy_backend_http_responses_total{proxy=~".*{{args.service-name}}.*", code=~"2xx|3xx"}[3m])) /
+          sum(rate(haproxy_backend_http_responses_total{proxy=~".*{{args.service-name}}.*"}[3m]))
