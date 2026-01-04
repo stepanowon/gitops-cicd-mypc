@@ -5,9 +5,9 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  # external ip가 192.168.56.52 인경우의 예시
+  # external ip가 192.168.56.60 인경우의 예시
   # 내부 DNS nip.io 사용
-  - host: example.com.192.168.56.52.nip.io
+  - host: example.com.192.168.56.60.nip.io
     http:
       paths:
       - path: /
