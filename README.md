@@ -1,4 +1,4 @@
-<img width="1021" height="351" alt="image" src="https://github.com/user-attachments/assets/ae55db17-e3f7-4d8b-b98c-1f6e3dec0879" /># 2026.1 변경 사항
+# 2026.1 변경 사항
 - [Argocd Image updater가 0.14.0에서 1.0으로 업그레이드](#imageupdater)
 - [Ingress Nginx Controller 지원종료로 인해 haproxy-ingress-controller로 교체](#haproxy)
 ---
