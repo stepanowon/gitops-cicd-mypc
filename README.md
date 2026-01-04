@@ -148,7 +148,6 @@ kubectl apply -f nodeapp2.yaml
 ```
 
 ### Ingress 작성 (haproxy-ingress-pathrewrite.yaml)
-성-
 - 작성후 kubectl apply -f haproxy-ingress-pathrewrite.yaml  명령 실행
 ```
 apiVersion: networking.k8s.io/v1
