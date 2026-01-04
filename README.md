@@ -142,6 +142,10 @@ helm upgrade -i -n haproxy-controller haproxy-ingress haproxytech/kubernetes-ing
 ```
 
 ### nodeapp1.yaml, nodeapp2.yaml은 ingress-nginx-controller에서 사용하던 것과 동일함
+```
+kubectl apply -f nodeapp1.yaml
+kubectl apply -f nodeapp2.yaml
+```
 
 ### Ingress 작성 (haproxy-ingress-pathrewrite.yaml)
 성-
