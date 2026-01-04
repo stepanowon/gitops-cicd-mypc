@@ -83,8 +83,9 @@ config:
       api_url: "http://192.168.56.103:8082"
       prefix:  "192.168.56.103:8082"
       ping: true
-      insecure: false
+      insecure: true
       credentials: "secret:argocd/nexus-cred"		# 형식 : "secret:네임스페이스/시크릿명"
+
 
 
 @슬라이드27
@@ -92,7 +93,7 @@ config:
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
 
-helm install argocd-image-updater argo/argocd-image-updater --version 0.14.0 \
+helm install argocd-image-updater argo/argocd-image-updater \
 --namespace argocd \
 --values values-image-updater.yaml
 
@@ -111,7 +112,7 @@ kubectl edit deployment argocd-image-updater -n argocd
 
 // docker hub에서 발급받은 token을 password로 입력함
 kubectl create secret docker-registry dockerhub-cred -n argocd \
---docker-server=registry.docker.io \
+--docker-server=registry-1.docker.io \
 --docker-username=도커허브사용자명  \
 --docker-password=도커허브토큰
 
@@ -125,19 +126,37 @@ resources:
 
 @슬라이드29
 
-argocd-image-updater.argoproj.io/image-list=myapp=[dockerhub-id]/nodeapp-git
-argocd-image-updater.argoproj.io/myapp.force-update=true 
-argocd-image-updater.argoproj.io/myapp.pull-secret=argocd/dockerhub-cred
-argocd-image-updater.argoproj.io/myapp.update-strategy=semver 
-argocd-image-updater.argoproj.io/write-back-method=argocd
+# image-updater.yaml 파일
+# 작성 후 kubectl apply –f image-updater.yaml 실행
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: nodeapp-image-updater
+  namespace: argocd
+spec:
+  # ArgoCD Application이 있는 namespace
+  namespace: argocd
+  # Write-back 방식 설정
+  writeBackConfig:
+    method: "argocd"
+  # 대상 Application 지정. ArgoCD에 등록된 Application의 이름을 지정함
+  applicationRefs:
+    - namePattern: "nodeapp-cd-test-app"
+      images:
+        - alias: "nodeapp-git"
+          imageName: "도커허브ID/nodeapp-git"
+          commonUpdateSettings:
+            updateStrategy: "semver"
+            forceUpdate: true
+            pullSecret: "pullsecret:argocd/dockerhub-cred"   #자격증명을 직접 지정
 
 
 @슬라이드30
 # argocd image updater 재시작
-kubectl rollout restart deployment argocd-image-updater -n argocd
+kubectl rollout restart deployment argocd-image-updater-controller -n argocd
 
 # argocd image updater 로그 조회
-kubectl logs -n argocd $(kubectl get pods -n argocd -o jsonpath="{.items[*].metadata.name}" | tr ' ' '\n' | grep argocd-image-updater)
+kubectl logs -n argocd $(kubectl get pods -n argocd -o jsonpath="{.items[*].metadata.name}" | tr ' ' '\n' | grep argocd-image-updater-controller)
 
 
 @슬라이드31
