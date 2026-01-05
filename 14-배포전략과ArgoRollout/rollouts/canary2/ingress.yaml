@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   name: rollouts-demo
 spec:
-  ingressClassName: nginx
+  ingressClassName: haproxy
   rules:
   # external ip가 192.168.56.60 인경우의 예시
   # 내부 DNS nip.io 사용
