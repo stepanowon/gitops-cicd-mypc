@@ -138,7 +138,7 @@ helm repo update
 # namespace 생성
 kubectl create namespace haproxy-controller
 
-# ingress-nginx 네임스페이스 ingress-controller 설치
+# haproxy-controller 네임스페이스에 haproxy-ingress-controller 설치
 # service 타입을 LB로 설정하고 LB의 IP 주소를 192.168.56.60으로 설정. 이를 위해 metalLB가 미리 설정되어야 함
 helm upgrade -i -n haproxy-controller haproxy-ingress haproxytech/kubernetes-ingress \
   --set controller.service.type=LoadBalancer \
